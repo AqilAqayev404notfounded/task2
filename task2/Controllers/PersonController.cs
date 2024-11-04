@@ -11,7 +11,8 @@ namespace task2.Controllers
     {
         private string _filePath = "";
         private readonly IWebHostEnvironment webHoste;
-        private readonly XmlService xmlService; private static List<Person> Persons = new List<Person>
+        private readonly XmlService xmlService; 
+        private static List<Person> Persons = new List<Person>
     {
         new Person{Id = 2, Firstname="Aqil",Lastname="Agayev",Age=21}
     };
@@ -43,7 +44,15 @@ namespace task2.Controllers
 
 
         }
+        public IActionResult CreatePerson(Person person)
+        {
+            Persons.Add(person);
+            xmlService.SaveToXml(Persons);
+            return Ok(Persons);
+        }
 
-        
+      
+
+
     }
 }

@@ -1,55 +1,36 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Xml;
-using System.Xml.Linq;
 using System.Xml.Serialization;
 
 public class XmlService
 {
-    private string _filePath = "";
-    private readonly IWebHostEnvironment _environment;
-   
+    private readonly string _filePath;
 
-    public XmlService(IWebHostEnvironment environment)
+    public XmlService(string filePath)
     {
-        _environment = environment;
-        _filePath = Path.Combine(_environment.WebRootPath, "data.xml");
-
+        _filePath = filePath;
     }
 
     public List<Person> GetAll()
     {
-        var people = new List<Person>();
-        XmlDocument doc = new XmlDocument();
-        doc.Load(_filePath);
-
-        foreach (XmlNode node in doc.SelectNodes("/persons/person"))
+        if (!File.Exists(_filePath))
         {
-            people.Add(new Person
-            {
-                Id = int.Parse(node["id"].InnerText),
-                Firstname = node["firstname"].InnerText,
-                Lastname = node["lastname"].InnerText,
-                Age = int.Parse(node["age"].InnerText)
-            });
+            return new List<Person>();
         }
 
-        return people;
-    }
-    public IActionResult <Person> CreatePerson(Person person)
-    {
-        Persons.Add(person);
-        savetoxml();
+        var serializer = new XmlSerializer(typeof(List<Person>));
+        using (var reader = new StreamReader(_filePath))
+        {
+            return (List<Person>)serializer.Deserialize(reader);
+        }
     }
 
-    private void savetoxml()
+    public void SaveToXml(List<Person> persons)
     {
-        var serialazer = new XmlSerializer(typeof(List<Person>));
-        using (FileStream writer = new FileStream(_filePath,FileMode.OpenOrCreate))
+        var serializer = new XmlSerializer(typeof(List<Person>));
+        using (var writer = new FileStream(_filePath, FileMode.Create))
         {
-            serialazer.Serialize(writer , Persons);
+            serializer.Serialize(writer, persons);
         }
     }
 }
