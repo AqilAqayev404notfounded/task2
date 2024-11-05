@@ -1,36 +1,119 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Xml;
+using System.Xml.Linq;
 using System.Xml.Serialization;
 
 public class XmlService
 {
-    private readonly string _filePath;
+    private readonly string _filePath="";
+    private readonly IWebHostEnvironment webHoste;
 
-    public XmlService(string filePath)
+
+  
+
+    public XmlService(IWebHostEnvironment webHoste)
     {
-        _filePath = filePath;
+        this.webHoste = webHoste;
+        _filePath = Path.Combine(webHoste.WebRootPath, "data.xml");
+
     }
 
     public List<Person> GetAll()
     {
-        if (!File.Exists(_filePath))
+        var people = new List<Person>();
+        XmlDocument doc = new XmlDocument();
+        doc.Load(_filePath);
+
+        foreach (XmlNode node in doc.SelectNodes("/persons/person"))
         {
-            return new List<Person>();
+            people.Add(new Person
+            {
+                Id = int.Parse(node["id"].InnerText),
+                Firstname = node["firstname"].InnerText,
+                Lastname = node["lastname"].InnerText,
+                Age = int.Parse(node["age"].InnerText)
+            });
         }
 
-        var serializer = new XmlSerializer(typeof(List<Person>));
-        using (var reader = new StreamReader(_filePath))
+        return people;
+    }
+
+    public void WritePersonToXml(Person person)
+    {
+        XDocument doc;
+        if (System.IO.File.Exists(_filePath))
         {
-            return (List<Person>)serializer.Deserialize(reader);
+            doc = XDocument.Load(_filePath); 
+        }
+        else
+        {
+            doc = new XDocument(new XElement("Persons")); 
+        }
+
+       
+        XElement newPerson = new XElement("person",
+
+            new XElement("id", person.Id),
+            new XElement("firstname", person.Firstname),
+            new XElement("lastname" ,person.Lastname),
+            new XElement("age", person.Age)
+        );
+
+    
+        doc.Element("persons").Add(newPerson);
+
+     
+        doc.Save(_filePath);
+    }
+
+    public void DeletePersonToXml(int id)
+    {
+        XmlDocument doc = new XmlDocument();
+        doc.Load(_filePath);
+
+        XmlNode personNode = doc.SelectSingleNode($"/persons/person[id='{id}']");
+
+        if (personNode != null)
+        {
+            personNode.ParentNode.RemoveChild(personNode);
+            doc.Save(_filePath);
         }
     }
 
-    public void SaveToXml(List<Person> persons)
+    public void UpdatePersonToXml(Person person)
     {
-        var serializer = new XmlSerializer(typeof(List<Person>));
-        using (var writer = new FileStream(_filePath, FileMode.Create))
+        XDocument doc;
+        if (System.IO.File.Exists(_filePath))
         {
-            serializer.Serialize(writer, persons);
+            doc = XDocument.Load(_filePath);
         }
+        else
+        {
+            doc = new XDocument(new XElement("Persons"));
+        }
+
+        XElement existingPerson = doc.Descendants("person").FirstOrDefault(p => (int)p.Element("id") == person.Id);
+
+        if (existingPerson != null)
+        {
+            existingPerson.Element("firstname").Value = person.Firstname;
+            existingPerson.Element("lastname").Value = person.Lastname;
+            existingPerson.Element("age").Value = person.Age.ToString();
+        }
+        else
+        {
+
+            XElement newPerson = new XElement("person",
+                new XElement("id", person.Id),
+                new XElement("firstname", person.Firstname),
+                new XElement("lastname", person.Lastname),
+                new XElement("age", person.Age)
+            );
+
+            doc.Element("persons").Add(newPerson);
+        }
+
+        doc.Save(_filePath);
     }
 }
